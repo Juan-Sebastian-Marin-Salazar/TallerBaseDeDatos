@@ -29,7 +29,7 @@ Requisito 5.- Tener MYSQL
 Instrucciones de instalacion nuestro sitio web:
 
 Paso 1.- Clonar el repositorio: 
-https://github.com/Juan-Sebastian-Marin-Salazar/PPW4.git
+https://github.com/Juan-Sebastian-Marin-Salazar/TallerBaseDeDatos.git
 
 Paso 2.- En MYSQL ejecutar el script llamado: 
 scripts.sql de la carpeta 'PPW4\database\scripts.sql'
