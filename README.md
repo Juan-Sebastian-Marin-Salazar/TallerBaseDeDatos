@@ -1,15 +1,11 @@
-# PPW4
+# Base de datos
 Proyecto 4 de Programacion Web
 
-Equipo de desarrollo “No compila”:
-
-Zavalza Covarrubias Edgar Enrique
-
-Telles Castro Jose Ricardo
+Equipo
 
 Marin Salazar Juan Sebastian
 
-Estrada Bustos Miguel Angel
+
 
 ===========================================================================
 
