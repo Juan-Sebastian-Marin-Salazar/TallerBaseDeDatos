@@ -39,6 +39,14 @@ config.py en la carpeta 'PPW4\app\config.py' y cambiar el campo MYSQL_PASSWORD =
 
 paso 4.- Ejecutar el app.py que se encuentra en la direccion 'PPW4\app\app.py'
 
+Para correr el sitio se ocupan hacer estos comandos en la ruta donde se clono el repositorio
+
+Comando para crear un entorno virtual: python -m venv .venv
+
+Comando para activarla: .\.venv\Scripts\activate
+
+Comando para descargar requerimientos: pip install -r requirements.txt
+
 ===========================================================================
 
 Uso de nuestro sitio web:
