@@ -47,6 +47,42 @@ CREATE TABLE dishes (
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
+
+-- Triggers para validar precio en la tabla `dishes`
+DELIMITER //
+CREATE TRIGGER trg_validate_dish_price
+BEFORE INSERT ON dishes
+FOR EACH ROW
+BEGIN
+    IF NEW.price <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El precio debe ser mayor a cero.';
+    END IF;
+
+    IF NEW.price > 1500 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El precio excede el límite permitido.';
+    END IF;
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER trg_validate_dish_price_update
+BEFORE UPDATE ON dishes
+FOR EACH ROW
+BEGIN
+    IF NEW.price <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El precio debe ser mayor a cero.';
+    END IF;
+
+    IF NEW.price > 1500 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'El precio excede el límite permitido.';
+    END IF;
+END //
+DELIMITER ;
+
 -- Sushi y Sashimi (category_id = 1)
 INSERT INTO dishes(name, descr, price, image, category_id) VALUES('Ride on Time', 'Un roll vibrante con atún fresco, mango dulce y una salsa especial de la casa que realza los sabores tropicales. Perfecto.', 220.00, 'img/Img_Menu/Category 1 img 1.jpg', 1);
 INSERT INTO dishes(name, descr, price, image, category_id) VALUES('Silent Screamer', 'Nigiri de anguila glaseada con salsa teriyaki casera y un toque de wasabi, una combinación intensa y llena de carácter.', 190.00, 'img/Img_Menu/Category 1 img 2.png', 1);

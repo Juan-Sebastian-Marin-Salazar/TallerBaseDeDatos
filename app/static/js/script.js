@@ -460,6 +460,92 @@ document.addEventListener("DOMContentLoaded", function () {
 
     }
 
+    // ---- Form validation + image preview for admin create/edit dish ----
+    const MAX_PRICE = 1500;
+    const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
+    const ALLOWED_TYPES = ['image/png','image/jpeg','image/jpg','image/gif','image/webp','image/avif'];
+
+    function showErrors(containerId, messages){
+        const container = document.getElementById(containerId);
+        if(!container) return;
+        container.innerHTML = '';
+        if(messages.length === 0) return;
+        const ul = document.createElement('ul');
+        ul.className = 'alert alert-danger';
+        messages.forEach(m => {
+            const li = document.createElement('li');
+            li.textContent = m;
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
+    }
+
+    function validatePrice(value){
+        if(value === null || value === undefined || value === '') return ['El precio es obligatorio.'];
+        const n = Number(value);
+        if(Number.isNaN(n)) return ['Precio inválido. Ingresa un número.'];
+        if(n <= 0) return ['El precio debe ser mayor a cero.'];
+        if(n > MAX_PRICE) return [`El precio no puede exceder $${MAX_PRICE}.`];
+        return [];
+    }
+
+    function validateImageFile(file){
+        const errors = [];
+        if(!file) return errors;
+        if(ALLOWED_TYPES.indexOf(file.type) === -1) errors.push('Tipo de imagen no permitido. Usa png/jpg/gif/webp/avif.');
+        if(file.size > MAX_IMAGE_BYTES) errors.push('La imagen supera el tamaño máximo de 2 MB.');
+        return errors;
+    }
+
+    function setupPreview(fileInputId, previewImgId){
+        const input = document.getElementById(fileInputId);
+        const preview = document.getElementById(previewImgId);
+        if(!input || !preview) return;
+        input.addEventListener('change', function(e){
+            const f = input.files[0];
+            if(!f){ preview.style.display = 'none'; preview.src = ''; return; }
+            const errs = validateImageFile(f);
+            if(errs.length){
+                alert(errs.join('\n'));
+                input.value = '';
+                preview.style.display = 'none';
+                preview.src = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(ev){
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(f);
+        });
+    }
+
+    function setupFormValidation(formId, fileInputId, previewId, priceInputId, imageUrlId, errorsContainerId){
+        const form = document.getElementById(formId);
+        if(!form) return;
+        setupPreview(fileInputId, previewId);
+        form.addEventListener('submit', function(e){
+            const errs = [];
+            const priceVal = document.getElementById(priceInputId).value;
+            errs.push(...validatePrice(priceVal));
+            const fileInput = document.getElementById(fileInputId);
+            if(fileInput && fileInput.files && fileInput.files[0]){
+                errs.push(...validateImageFile(fileInput.files[0]));
+            }
+            // if no file and no url, it's ok (existing entries may rely on URL)
+            if(errs.length){
+                e.preventDefault();
+                showErrors(errorsContainerId, errs);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+
+    // Initialize validation for create and edit forms
+    setupFormValidation('createDishForm', 'file_create', 'preview_create', 'price_create', 'image_create', 'formErrors_create');
+    setupFormValidation('editDishForm', 'file_edit', 'preview_edit', 'price_edit', 'image_edit', 'formErrors_edit');
+
     if (document.getElementById("calcbutton")) {
         const calcButton = document.getElementById('calcbutton');
         const calculator = document.getElementById('calculator');

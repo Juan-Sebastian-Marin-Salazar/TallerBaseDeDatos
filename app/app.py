@@ -7,12 +7,20 @@ from app.models.entities.users import User
 from app.models.modelOrders import ModelOrders
 from flask_login import LoginManager, login_user, logout_user,login_required,current_user
 from functools import wraps
+import os
+import uuid
+import time
+from werkzeug.utils import secure_filename
 from app.models.modelOrders import ModelOrders
 
 
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
+# Carpeta donde se guardarán las imágenes subidas
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'img', 'Img_Menu')
+# Extensiones permitidas
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif'}
 db = MySQL(app)
 login_manager_app = LoginManager(app)
 
@@ -205,19 +213,65 @@ def crear_platillo():
     categories = cursor.fetchall()
     
     if request.method == 'POST':
-        name = request.form['name']
-        desc = request.form['desc']
-        price = request.form['price']
-        image = request.form['image']
-        category_id = request.form['category_id']
+        name = request.form.get('name')
+        desc = request.form.get('desc')
+        price = request.form.get('price')
+        category_id = request.form.get('category_id')
 
-        cursor.execute('''
-            INSERT INTO dishes (name, descr, price, image, category_id)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (name, desc, price, image, category_id))
-        db.connection.commit()
-        cursor.close()
-        return redirect(url_for('menu'))
+        # Procesar archivo subido (si existe)
+        image_path_db = None
+        file = request.files.get('image_file')
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            # agregar prefijo único para evitar colisiones
+            unique_name = f"{int(time.time())}_{uuid.uuid4().hex}_{filename}"
+            # asegurar que la carpeta exista
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+            file.save(save_path)
+            # Ruta relativa que se guardará en la BD (igual que entradas existentes)
+            image_path_db = os.path.join('img', 'Img_Menu', unique_name).replace('\\', '/')
+
+        # Si no se subió archivo, usar el campo de texto (opcional)
+        if not image_path_db:
+            image_path_db = request.form.get('image')
+
+        # Validación previa en la app (evita llegar al trigger cuando sea posible)
+        try:
+            price_val = float(price)
+        except Exception:
+            flash("Precio inválido. Asegúrate de ingresar un número.")
+            cursor.close()
+            return render_template('admin/create_dish.html', categories=categories)
+
+        if price_val <= 0:
+            flash('El precio debe ser mayor a cero.')
+            cursor.close()
+            return render_template('admin/create_dish.html', categories=categories)
+
+        if price_val > 1500:
+            flash('El precio no puede exceder $1500.')
+            cursor.close()
+            return render_template('admin/create_dish.html', categories=categories)
+
+        try:
+            cursor.execute('''
+                INSERT INTO dishes (name, descr, price, image, category_id)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (name, desc, price_val, image_path_db, category_id))
+            db.connection.commit()
+            cursor.close()
+            return redirect(url_for('menu'))
+        except Exception as e:
+            # Extraer mensaje legible del error
+            err_msg = None
+            if hasattr(e, 'args') and len(e.args) >= 2:
+                err_msg = str(e.args[1])
+            else:
+                err_msg = str(e)
+            flash(f"Error al guardar platillo: {err_msg}")
+            cursor.close()
+            return render_template('admin/create_dish.html', categories=categories)
     
     cursor.close()
     return render_template('admin/create_dish.html', categories=categories)
@@ -244,14 +298,71 @@ def edit_dish(id):
         image = request.form['image']
         category_id = request.form['category_id']
 
-        cursor.execute('''
-            UPDATE dishes
-            SET name=%s, descr=%s, price=%s, image=%s, category_id=%s
-            WHERE id=%s
-        ''', (name, descr, price, image, category_id, id))
-        db.connection.commit()
-        cursor.close()
-        return redirect(url_for('menu'))
+        # Validación previa
+        try:
+            price_val = float(price)
+        except Exception:
+            flash("Precio inválido. Asegúrate de ingresar un número.")
+            cursor.close()
+            return render_template('admin/edit_dish.html', dish=dish, categories=categories)
+
+        if price_val <= 0:
+            flash('El precio debe ser mayor a cero.')
+            cursor.close()
+            return render_template('admin/edit_dish.html', dish=dish, categories=categories)
+
+        if price_val > 1500:
+            flash('El precio no puede exceder $1500.')
+            cursor.close()
+            return render_template('admin/edit_dish.html', dish=dish, categories=categories)
+
+        # Procesar posible nuevo archivo de imagen (reemplazo)
+        existing_image = dish[4]
+        image_path_db = None
+        file = request.files.get('image_file')
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            unique_name = f"{int(time.time())}_{uuid.uuid4().hex}_{filename}"
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+            file.save(save_path)
+            image_path_db = os.path.join('img', 'Img_Menu', unique_name).replace('\\', '/')
+            # Borrar imagen anterior si estaba en la carpeta static/img
+            try:
+                if existing_image and existing_image.startswith('img/'):
+                    old_parts = existing_image.split('/')
+                    old_fs = os.path.join(app.root_path, 'static', *old_parts)
+                    if os.path.exists(old_fs):
+                        os.remove(old_fs)
+            except Exception:
+                pass
+        else:
+            # Si el admin proporcionó una URL en el campo 'image', la usamos; si no, mantenemos la existente
+            image_path_db = request.form.get('image') or existing_image
+
+        try:
+            cursor.execute('''
+                UPDATE dishes
+                SET name=%s, descr=%s, price=%s, image=%s, category_id=%s
+                WHERE id=%s
+            ''', (name, descr, price_val, image_path_db, category_id, id))
+            db.connection.commit()
+            cursor.close()
+            return redirect(url_for('menu'))
+        except Exception as e:
+            err_msg = None
+            if hasattr(e, 'args') and len(e.args) >= 2:
+                err_msg = str(e.args[1])
+            else:
+                err_msg = str(e)
+            flash(f"Error al actualizar platillo: {err_msg}")
+            cursor.close()
+            # recargar el platillo para mostrar datos actuales
+            cursor = db.connection.cursor()
+            cursor.execute("SELECT * FROM dishes WHERE id = %s", (id,))
+            dish = cursor.fetchone()
+            cursor.close()
+            return render_template('admin/edit_dish.html', dish=dish, categories=categories)
 
     cursor.close()
     return render_template('admin/edit_dish.html', dish=dish, categories=categories)

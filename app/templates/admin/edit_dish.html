@@ -2,11 +2,14 @@
 {% block titulo %}Menu{% endblock %}
 {% block contenido %}
 <h1>Editar Platillo</h1>
-<form method="POST">
-    <label>Nombre:</label><input type="text" name="name" value="{{ dish[1] }}"><br>
-    <label>Descripción:</label><textarea name="desc">{{ dish[2] }}</textarea><br>
-    <label>Precio:</label><input type="number" name="price" step="0.01" value="{{ dish[3] }}"><br>
-    <label>Imagen:</label><input type="text" name="image" value="{{ dish[4] }}"><br>
+<form id="editDishForm" method="POST" enctype="multipart/form-data">
+    <div id="formErrors_edit" class="mb-2"></div>
+    <label>Nombre:</label><input id="name_edit" type="text" name="name" value="{{ dish[1] }}"><br>
+    <label>Descripción:</label><textarea id="desc_edit" name="desc">{{ dish[2] }}</textarea><br>
+    <label>Precio:</label><input id="price_edit" type="number" name="price" step="0.01" value="{{ dish[3] }}"><br>
+    <label>Imagen (subir nuevo archivo para reemplazar):</label><input id="file_edit" type="file" name="image_file" accept="image/*"><br>
+    <img id="preview_edit" alt="Preview" style="max-width:200px; display:none; margin-bottom:8px;"/>
+    <label>O Imagen (URL):</label><input id="image_edit" type="text" name="image" value="{{ dish[4] }}"><br>
     <label>Categoría:</label>
     <select name="category_id">
         {% for cat in categories %}
@@ -38,12 +41,11 @@
             </div>
         </div>
         <div class="footer-section">
-            <h4>Equipo: No compila</h4>
+            <h4>Equipo: Capibaras.rar</h4>
             <div class="social-icons">
-                <p><i class="fas fa-map-marker-alt"></i> Zavalza Covarrubias Edgar Enrique</p>
-                <p><i class="fas fa-map-marker-alt"></i> Telles Castro Jose Ricardo</p>
                 <p><i class="fas fa-map-marker-alt"></i> Marin Salazar Juan Sebastian</p>
-                <p><i class="fas fa-map-marker-alt"></i> Estrada Bustos Miguel Angel</p>
+                <p><i class="fas fa-map-marker-alt"></i> Bustamante Castillo Jorge Ezequiel</p>
+                <p><i class="fas fa-map-marker-alt"></i> Hernandez Romero Joana Gisel</p>
             </div>
         </div>
     </div>
